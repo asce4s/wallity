@@ -1,7 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { type Event as TauriEvent, listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
 
@@ -85,12 +85,15 @@
     });
   }
 
+  let unlisten: (() => void) | undefined;
+  let handleGlobalKeyDown: ((e: KeyboardEvent) => void) | undefined;
+
   onMount(async () => {
     // Simple batching for better performance
     let batch: Image[] = [];
     let batchTimeout: number | null = null;
 
-    const unlisten = await listen<Image>(
+    unlisten = await listen<Image>(
       "new-image",
       (event: TauriEvent<Image>) => {
         batch.push(event.payload);
@@ -108,7 +111,7 @@
     );
 
     // Global ESC key listener to close the app
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         getCurrentWindow().close();
@@ -123,12 +126,13 @@
     setTimeout(() => {
       scrollContainer?.focus();
     }, 100);
+  });
 
-    // Cleanup on unmount
-    return () => {
-      unlisten();
+  onDestroy(() => {
+    if (unlisten) unlisten();
+    if (handleGlobalKeyDown) {
       window.removeEventListener("keydown", handleGlobalKeyDown);
-    };
+    }
   });
 </script>
 
