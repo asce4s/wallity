@@ -9,7 +9,6 @@ A desktop wallpaper manager built with Tauri, SvelteKit, and TypeScript, designe
 
 This application is specifically designed for:
 - **Wayland** compositors
-- **Hyprland** window manager
 
 ## Features
 
