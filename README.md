@@ -44,7 +44,7 @@ This application is specifically designed for:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/wallity.git
+   git clone https://github.com/asce4s/wallity.git
    cd wallity
    ```
 
