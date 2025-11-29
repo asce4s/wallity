@@ -1,27 +1,19 @@
 <script lang="ts">
   import "../app.css";
   import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-  import { fade } from "svelte/transition";
-  import {
-    createVirtualizer,
-    createWindowVirtualizer,
-  } from "@tanstack/svelte-virtual";
   import { onMount } from "svelte";
   import { type Event as TauriEvent, listen } from "@tauri-apps/api/event";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
 
   const columns = 3;
   let timeout: number;
 
-  type Image = { name: string; path: string };
+  type Image = { name: string; img_path: string; thumbnail_path: string };
 
   let wallpapers = $state<Image[]>([]);
-
-  let virtualListEl = $state<HTMLDivElement>();
-  let virtualItemEls = $state<HTMLDivElement[]>([]);
-  let gridEl = $state<HTMLDivElement>();
+  let scrollContainer = $state<HTMLDivElement>();
   let selectedIndex = $state<number>(0);
 
-  let prevRowCount = $state(0);
   let search = $state<string>("");
   let filterd = $derived(
     wallpapers.filter((v) => v.name.toLowerCase().includes(search)),
@@ -29,10 +21,11 @@
 
   function onSearch(e: Event) {
     const target = e.target as HTMLInputElement;
-    const v = target.value.toLowerCase();
+    const v = target.value;
     clearTimeout(timeout);
-    timeout = setTimeout(() => (search = v), 500);
+    timeout = setTimeout(() => (search = v.toLowerCase()), 300);
   }
+
   function handleKeyDown(e: KeyboardEvent) {
     const maxIndex = filterd.length - 1;
 
@@ -63,86 +56,79 @@
         break;
       case "Enter":
         e.preventDefault();
-        if (selectedIndex >= 0) {
-          // Handle selection - you can emit an event or call a function
-          console.log("Selected:", filterd[selectedIndex]);
+        if (selectedIndex >= 0 && filterd[selectedIndex]) {
+          selectWallpaper(filterd[selectedIndex]);
         }
-        break;
-      case "Escape":
-        selectedIndex = -1;
         break;
     }
   }
 
   function scrollToSelected() {
-    if (selectedIndex >= 0) {
-      const rowIndex = Math.floor(selectedIndex / columns);
-      $virtualizer.scrollToIndex(rowIndex, { align: "auto" });
+    if (selectedIndex >= 0 && scrollContainer) {
+      const element = scrollContainer.querySelector(
+        `[data-index="${selectedIndex}"]`,
+      ) as HTMLElement;
+      element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }
 
   function handleImageClick(index: number) {
     selectedIndex = index;
-    gridEl?.focus();
-    console.log(filterd[index]);
+    scrollContainer?.focus();
+    selectWallpaper(filterd[index]);
   }
 
-  function onImageSelect(image: Image) {
-    console.log("selected");
-  }
-
-  async function selectWallpaper(wallpaper: Image) {
+  function selectWallpaper(wallpaper: Image) {
     console.log("Selected wallpaper:", wallpaper);
-    await invoke("select_wallpaper", { image: wallpaper });
-    // Add your wallpaper selection logic here
+    invoke("select_wallpaper", { image: wallpaper }).catch((err) => {
+      console.error("Failed to set wallpaper:", err);
+    });
   }
-
-  let virtualizer = $derived(
-    createVirtualizer<HTMLDivElement, HTMLDivElement>({
-      count: Math.ceil(filterd.length / columns),
-      getScrollElement: () => virtualListEl ?? null,
-      estimateSize: () => 158,
-      overscan: 5,
-    }),
-  );
-
-  const items = $derived($virtualizer.getVirtualItems());
-
-  $effect(() => {
-    const newRowCount = Math.ceil(filterd.length / columns);
-
-    if (newRowCount !== prevRowCount)
-      // Recreate virtualizer when filtered items change
-      virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
-        count: newRowCount,
-        getScrollElement: () => virtualListEl!,
-        estimateSize: () => 158,
-        overscan: 5,
-      });
-  });
-
-  $effect(() => {
-    if (virtualItemEls.length) {
-      virtualItemEls.forEach((el) => {
-        if (el) $virtualizer.measureElement(el);
-      });
-    }
-  });
 
   onMount(async () => {
-    // Focus the input element after the component has mounted
-    if (virtualListEl) {
-      virtualListEl.focus();
-    }
+    // Simple batching for better performance
+    let batch: Image[] = [];
+    let batchTimeout: number | null = null;
 
     const unlisten = await listen<Image>(
       "new-image",
       (event: TauriEvent<Image>) => {
-        wallpapers = [...wallpapers, event.payload];
+        batch.push(event.payload);
+
+        if (batchTimeout !== null) {
+          clearTimeout(batchTimeout);
+        }
+
+        batchTimeout = setTimeout(() => {
+          wallpapers = [...wallpapers, ...batch];
+          batch = [];
+          batchTimeout = null;
+        }, 50);
       },
     );
 
+    // Global ESC key listener to close the app
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        getCurrentWindow().close();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+
     invoke("load_images");
+
+    // Focus container after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      scrollContainer?.focus();
+    }, 100);
+
+    // Cleanup on unmount
+    return () => {
+      unlisten();
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
   });
 </script>
 
@@ -157,59 +143,45 @@
   <!-- /> -->
   <!-- </div> -->
 
+  <!-- svelte-ignore a11y_autofocus -->
   <div
-    class="overflow-y-auto mt-2 focus:ring-0 focus:border-0 focus:outline-0"
-    style="height:560px;will-change: transform;"
-    bind:this={virtualListEl}
+    class="overflow-y-auto mt-2 focus:outline-none"
+    style="height:600px; scroll-behavior:smooth;"
+    bind:this={scrollContainer}
     onkeydown={handleKeyDown}
-    tabindex="0"
+    tabindex={0}
+    autofocus
     role="button"
+    aria-label="Wallpaper grid"
   >
-    <div
-      style="position: relative; height: {$virtualizer.getTotalSize()}px; width: 100%;"
-    >
-      <div
-        class="grid grid-cols-3 gap-2"
-        style="position: absolute; top: 0; left: 0; width: 100%; transform: translateY({items[0]
-          ? items[0].start
-          : 0}px);"
-      >
-        {#each items as row (row.index)}
-          {#each Array(columns) as _, col}
-            {@const itemIndex = row.index * columns + col}
-            {#if filterd[itemIndex]}
-              {@const img = filterd[itemIndex]}
-              <div
-                class="group cursor-pointer border-2 border-solid rounded-sm overflow-hidden relative hover:border-amber-500 hover:shadow-xl transition-all outline-0 ring-0"
-                class:border-amber-950={selectedIndex !== itemIndex}
-                class:border-amber-600={selectedIndex === itemIndex}
-                class:border-3={selectedIndex === itemIndex}
-                transition:fade
-                style="height:150px"
-                bind:this={virtualItemEls[row.index]}
-                data-index={row.index}
-                onclick={() => handleImageClick(itemIndex)}
-                onkeypress={(e) =>
-                  e.key === "Enter" && handleImageClick(itemIndex)}
-                role="button"
-                tabindex="-2"
-              >
-                <img
-                  src={convertFileSrc(img.path)}
-                  alt={img.name}
-                  class="w-full h-full rounded-xs max-h-full"
-                  loading="lazy"
-                />
-                <div
-                  class="text-white z-50 absolute -bottom-12 p-1 bg-black w-full transition-all delay-50 duration-300 ease-in-out group-hover:bottom-0 opacity-60"
-                >
-                  {img.name}
-                </div>
-              </div>
-            {/if}
-          {/each}
-        {/each}
-      </div>
+    <div class="grid grid-cols-3 gap-2" style="contain:layout style paint;">
+      {#each filterd as img, index (img.img_path)}
+        <div
+          class="group cursor-pointer border-2 border-solid rounded-sm overflow-hidden relative hover:border-amber-500 hover:shadow-xl transition-[border-color,box-shadow] outline-0 ring-0"
+          class:border-amber-950={selectedIndex !== index}
+          class:border-amber-600={selectedIndex === index}
+          class:border-3={selectedIndex === index}
+          style="height:150px; contain:layout style paint;"
+          data-index={index}
+          onclick={() => handleImageClick(index)}
+          onkeypress={(e) => e.key === "Enter" && handleImageClick(index)}
+          role="button"
+          tabindex={-1}
+        >
+          <img
+            src={convertFileSrc(img.thumbnail_path)}
+            alt={img.name}
+            class="w-full h-full rounded-xs object-cover"
+            width="320"
+            height="150"
+          />
+          <div
+            class="text-white z-50 absolute -bottom-12 p-1 bg-black w-full transition-[bottom] duration-300 ease-in-out group-hover:bottom-0 opacity-60"
+          >
+            {img.name}
+          </div>
+        </div>
+      {/each}
     </div>
   </div>
 </main>

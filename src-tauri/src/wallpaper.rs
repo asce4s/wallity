@@ -1,0 +1,103 @@
+use crate::{
+    config::CONFIG,
+    events::emit_event,
+    image::Image,
+    thumbnail::{gen_thumbnail, list_thumbnails},
+};
+use rayon::prelude::*;
+use std::collections::HashSet;
+
+pub fn load_wallpapers() -> Result<(), String> {
+    let exts = ["png", "jpg", "jpeg", "webp"];
+
+    std::thread::spawn(move || {
+        let thumbnails: HashSet<String> = list_thumbnails();
+        let thumbnail_path = CONFIG
+            .cache_path
+            .clone()
+            .unwrap()
+            .to_string_lossy()
+            .trim_end_matches("/")
+            .to_string();
+
+        let absolute_path = CONFIG
+            .wallpaper_path
+            .as_ref()
+            .expect("Wallpaper Path not found");
+
+        if let Ok(entries) = std::fs::read_dir(absolute_path) {
+            let entries: Vec<_> = entries
+                .flatten()
+                .filter(|entry| entry.file_type().map(|f| f.is_file()).unwrap_or(false))
+                .collect();
+
+            // Separate entries into those with/without thumbnails
+            let (with_thumbnails, without_thumbnails): (Vec<_>, Vec<_>) =
+                entries.into_iter().partition(|entry| {
+                    entry
+                        .path()
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| thumbnails.contains(s))
+                        .unwrap_or(false)
+                });
+
+            // Process images WITH existing thumbnails first (instant UI feedback)
+            with_thumbnails.par_iter().for_each(|entry| {
+                let path = entry.path();
+
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                if !exts.contains(&ext.as_str()) {
+                    return;
+                }
+
+                let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+                let file_stem = path.file_stem().unwrap().to_string_lossy().to_string();
+                let img_path = path.to_string_lossy().to_string();
+
+                let image = Image {
+                    name: file_name,
+                    img_path,
+                    thumbnail_path: format!("{}/{}.webp", &thumbnail_path, &file_stem),
+                };
+
+                emit_event("new-image", image);
+            });
+
+            // Then generate missing thumbnails and emit (doesn't block above)
+            without_thumbnails.par_iter().for_each(|entry| {
+                let path = entry.path();
+
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                if !exts.contains(&ext.as_str()) {
+                    return;
+                }
+
+                let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+                let file_stem = path.file_stem().unwrap().to_string_lossy().to_string();
+                let img_path = path.to_string_lossy().to_string();
+
+                let image = Image {
+                    name: file_name,
+                    img_path: img_path.clone(),
+                    thumbnail_path: format!("{}/{}.webp", &thumbnail_path, &file_stem),
+                };
+
+                // Generate thumbnail BEFORE emitting to prevent layout shifts
+                let _ = gen_thumbnail(&img_path, &image.thumbnail_path);
+
+                emit_event("new-image", image);
+            });
+        }
+    });
+
+    Ok(())
+}

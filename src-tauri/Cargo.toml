@@ -23,4 +23,12 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 resolve-path = "0.1.0"
+toml = "0.9.8"
+infer = "0.19.0"
+mime = "0.3.17"
+once_cell = "1.21.3"
+thumbnailer = "0.5.1"
+anyhow = "1.0.100"
+image = "0.25.9"
+rayon = "1.11.0"
 

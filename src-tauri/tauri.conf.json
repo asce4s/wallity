@@ -15,14 +15,20 @@
         "title": "wallity",
         "width": 800,
         "height": 600,
-        "resizable": false
+        "resizable": false,
+        "decorations": false,
+        "backgroundColor": "#000000"
       }
     ],
     "security": {
       "csp": "http://asset.localhost",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "${HOME}/*",
+          "$HOME/.cache/wallity/**",
+          "$HOME/.cache/wallity"
+        ]
       }
     }
   },
