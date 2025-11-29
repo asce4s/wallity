@@ -50,6 +50,7 @@ jobs:
         run: bun install
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauri-build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -60,6 +61,12 @@ jobs:
             See the assets below to download this version and install.
             
             ### Installation Options
+            
+            #### Standalone Binary (Any Linux)
+            - Download `wallity-linux-x86_64` 
+            - Make it executable: `chmod +x wallity-linux-x86_64`
+            - Run it: `./wallity-linux-x86_64`
+            - Or copy to PATH: `sudo cp wallity-linux-x86_64 /usr/local/bin/wallity`
             
             #### AppImage (Universal Linux)
             - Download the `.AppImage` file
@@ -82,3 +89,13 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+      
+      - name: Upload standalone binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.tauri-build.outputs.releaseUploadUrl }}
+          asset_path: ./src-tauri/target/release/wallity
+          asset_name: wallity-linux-x86_64
+          asset_content_type: application/octet-stream

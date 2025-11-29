@@ -31,6 +31,21 @@ This application is specifically designed for:
 
 Download the latest release from the [Releases page](https://github.com/asce4s/wallity/releases)
 
+#### Standalone Binary (Quickest)
+```bash
+# Download the binary
+wget https://github.com/asce4s/wallity/releases/latest/download/wallity-linux-x86_64
+
+# Make it executable
+chmod +x wallity-linux-x86_64
+
+# Run it
+./wallity-linux-x86_64
+
+# Or install to PATH
+sudo mv wallity-linux-x86_64 /usr/local/bin/wallity
+```
+
 #### AppImage (Universal Linux)
 ```bash
 # Download, make executable, and run
