@@ -79,7 +79,6 @@
   }
 
   function selectWallpaper(wallpaper: Image) {
-    console.log("Selected wallpaper:", wallpaper);
     invoke("select_wallpaper", { image: wallpaper }).catch((err) => {
       console.error("Failed to set wallpaper:", err);
     });
@@ -93,22 +92,19 @@
     let batch: Image[] = [];
     let batchTimeout: number | null = null;
 
-    unlisten = await listen<Image>(
-      "new-image",
-      (event: TauriEvent<Image>) => {
-        batch.push(event.payload);
+    unlisten = await listen<Image>("new-image", (event: TauriEvent<Image>) => {
+      batch.push(event.payload);
 
-        if (batchTimeout !== null) {
-          clearTimeout(batchTimeout);
-        }
+      if (batchTimeout !== null) {
+        clearTimeout(batchTimeout);
+      }
 
-        batchTimeout = setTimeout(() => {
-          wallpapers = [...wallpapers, ...batch];
-          batch = [];
-          batchTimeout = null;
-        }, 50);
-      },
-    );
+      batchTimeout = setTimeout(() => {
+        wallpapers = [...wallpapers, ...batch];
+        batch = [];
+        batchTimeout = null;
+      }, 50);
+    });
 
     // Global ESC key listener to close the app
     handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -119,6 +115,9 @@
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
+    document.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
 
     invoke("load_images");
 
