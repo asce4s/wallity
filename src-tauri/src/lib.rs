@@ -53,12 +53,19 @@ fn select_wallpaper(image: Image) -> Result<(), String> {
             return;
         }
 
-        // Execute post script (wrapped in quotes for safety)
-        match Command::new("sh")
-            .arg("-c")
-            .arg(format!("\"{}\"", post_script))
-            .status()
-        {
+        // Execute post script
+
+        let result = if std::path::Path::new(&post_script).is_file() {
+            // It's a file path - execute the file directly
+            Command::new("sh").arg(&post_script).status()
+        } else {
+            Command::new("sh")
+                .arg("-c")
+                .arg(format!("\"{}\"", &post_script))
+                .status()
+        };
+
+        match result {
             Ok(status) if !status.success() => {
                 eprintln!("Post script exited with non-zero status: {}", status);
             }
