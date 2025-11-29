@@ -29,16 +29,43 @@ This application is specifically designed for:
 
 ### From GitHub Releases (Recommended)
 
-1. Download the latest release from the [Releases page](https://github.com/yourusername/wallity/releases)
-2. Download the `.AppImage` file for Linux
-3. Make it executable:
-   ```bash
-   chmod +x wallity_*_amd64.AppImage
-   ```
-4. Run it:
-   ```bash
-   ./wallity_*_amd64.AppImage
-   ```
+Download the latest release from the [Releases page](https://github.com/asce4s/wallity/releases)
+
+#### AppImage (Universal Linux)
+```bash
+# Download, make executable, and run
+chmod +x wallity_*_amd64.AppImage
+./wallity_*_amd64.AppImage
+```
+
+#### Debian/Ubuntu (.deb)
+```bash
+# Install with dpkg
+sudo dpkg -i wallity_*_amd64.deb
+
+# Or install with apt (handles dependencies)
+sudo apt install ./wallity_*_amd64.deb
+```
+
+#### Fedora/RHEL/openSUSE (.rpm)
+```bash
+# Fedora
+sudo dnf install wallity-*.x86_64.rpm
+
+# RHEL/CentOS
+sudo rpm -i wallity-*.x86_64.rpm
+
+# openSUSE
+sudo zypper install wallity-*.x86_64.rpm
+```
+
+#### Tarball (Any Linux)
+```bash
+# Extract and run
+tar -xzf wallity_*.tar.gz
+cd wallity
+./wallity
+```
 
 ### From Source
 

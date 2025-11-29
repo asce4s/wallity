@@ -42,7 +42,9 @@ jobs:
             libssl-dev \
             libgtk-3-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            rpm \
+            patchelf
 
       - name: Install frontend dependencies
         run: bun install
@@ -57,10 +59,26 @@ jobs:
             ## What's Changed
             See the assets below to download this version and install.
             
-            ### Installation
-            - Download the `.AppImage` file for Linux
+            ### Installation Options
+            
+            #### AppImage (Universal Linux)
+            - Download the `.AppImage` file
             - Make it executable: `chmod +x wallity_*_amd64.AppImage`
             - Run it: `./wallity_*_amd64.AppImage`
+            
+            #### Debian/Ubuntu (.deb)
+            - Download the `.deb` file
+            - Install: `sudo dpkg -i wallity_*_amd64.deb`
+            - Or double-click to install with your package manager
+            
+            #### Fedora/RHEL/openSUSE (.rpm)
+            - Download the `.rpm` file
+            - Install: `sudo rpm -i wallity-*.x86_64.rpm`
+            - Or use: `sudo dnf install wallity-*.x86_64.rpm` (Fedora)
+            
+            #### Tarball (Any Linux)
+            - Download the `.tar.gz` file
+            - Extract and run the binary
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
