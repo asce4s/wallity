@@ -25,6 +25,65 @@ This application is specifically designed for:
 - **Backend**: Tauri 2, Rust
 - **Package Manager**: Bun
 
+## Installation
+
+### From GitHub Releases (Recommended)
+
+1. Download the latest release from the [Releases page](https://github.com/yourusername/wallity/releases)
+2. Download the `.AppImage` file for Linux
+3. Make it executable:
+   ```bash
+   chmod +x wallity_*_amd64.AppImage
+   ```
+4. Run it:
+   ```bash
+   ./wallity_*_amd64.AppImage
+   ```
+
+### From Source
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/wallity.git
+   cd wallity
+   ```
+
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
+
+3. Build the application:
+   ```bash
+   bun run tauri build
+   ```
+
+4. The built binary will be available at `src-tauri/target/release/wallity`
+
+5. (Optional) Copy the binary to your PATH:
+   ```bash
+   sudo cp src-tauri/target/release/wallity /usr/local/bin/
+   ```
+
+### System Requirements
+
+- Linux with Wayland compositor (tested with Hyprland)
+- One of the following wallpaper setters:
+  - `hyprpaper`
+  - `swww`
+  - Any other tool that can read from a file path
+
+### First Run
+
+1. Create the config directory:
+   ```bash
+   mkdir -p ~/.config/wallity
+   ```
+
+2. (Optional) Create a config file `~/.config/wallity/wallity.toml` with your settings (see Configuration section below)
+
+3. Ensure you have wallpapers in `~/Pictures/wallpapers` or configure a custom path in the config file
+
 ## Development
 
 ### Prerequisites
