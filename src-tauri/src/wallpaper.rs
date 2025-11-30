@@ -31,9 +31,29 @@ pub fn load_wallpapers() -> Result<(), String> {
                 .filter(|entry| entry.file_type().map(|f| f.is_file()).unwrap_or(false))
                 .collect();
 
+            // Collect valid wallpaper file stems for cleanup later
+            let valid_stems: HashSet<String> = entries
+                .par_iter()
+                .filter_map(|entry| {
+                    let path = entry.path();
+                    let ext = path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    if exts.contains(&ext.as_str()) {
+                        path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
             // Separate entries into those with/without thumbnails
             let (with_thumbnails, without_thumbnails): (Vec<_>, Vec<_>) =
-                entries.into_iter().partition(|entry| {
+                entries.into_par_iter().partition(|entry| {
                     entry
                         .path()
                         .file_stem()
@@ -91,11 +111,25 @@ pub fn load_wallpapers() -> Result<(), String> {
                     thumbnail_path: format!("{}/{}.webp", &thumbnail_path, &file_stem),
                 };
 
-                // Generate thumbnail BEFORE emitting to prevent layout shifts
-                let _ = gen_thumbnail(&img_path, &image.thumbnail_path);
-
-                emit_event("new-image", image);
+                if let Ok(_) = gen_thumbnail(&img_path, &image.thumbnail_path) {
+                    emit_event("new-image", image);
+                } else {
+                    eprintln!("Failed to generate thumbnail for: {}", img_path);
+                }
             });
+
+            // Clean up orphaned thumbnails after main processing
+            for thumbnail_stem in thumbnails {
+                if !valid_stems.contains(&thumbnail_stem) {
+                    let thumbnail_file = format!("{}/{}.webp", &thumbnail_path, &thumbnail_stem);
+                    if let Err(e) = std::fs::remove_file(&thumbnail_file) {
+                        eprintln!(
+                            "Failed to remove orphaned thumbnail {}: {}",
+                            thumbnail_file, e
+                        );
+                    }
+                }
+            }
         }
     });
 
