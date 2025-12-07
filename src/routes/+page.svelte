@@ -149,7 +149,7 @@
   <!-- svelte-ignore a11y_autofocus -->
   <div
     class="overflow-y-auto mt-2 focus:outline-none"
-    style="height:600px; scroll-behavior:smooth;"
+    style="scroll-behavior:smooth;height: calc( 100vh - 50px)"
     bind:this={scrollContainer}
     onkeydown={handleKeyDown}
     tabindex={0}
